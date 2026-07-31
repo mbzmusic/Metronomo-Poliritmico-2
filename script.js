@@ -2,7 +2,7 @@
   let audioCtx = null;
   let masterGainNode = null;
   let isPlaying = false;
-  
+
   // BPM PREDEFINITO FISSO A 120
   let bpm = 120;
   let masterVolume = 0.5;
@@ -88,7 +88,7 @@
 
       // IL BPM PARTE SEMPRE DA 120 DEFAULT
       bpm = 120;
-      
+
       const savedVol = localStorage.getItem('metronome_vol_v4');
       if (savedVol) masterVolume = parseFloat(savedVol);
       const savedSound = localStorage.getItem('metronome_sound_v4');
@@ -286,7 +286,7 @@
 
   function renderMeasuresList() {
     measuresContainer.innerHTML = '';
-    
+
     measures.forEach((m, index) => {
       const isFirst = index === 0;
       const isLast = index === measures.length - 1;
@@ -294,7 +294,7 @@
 
       const row = document.createElement('div');
       row.className = `measure-row ${index === currentMeasureIndex ? 'current' : ''}`;
-      
+
       row.onclick = (e) => {
         if (['SELECT', 'BUTTON', 'svg', 'path', 'line', 'rect'].includes(e.target.tagName)) return;
         if (isPlaying) return;
@@ -307,7 +307,7 @@
       row.innerHTML = `
         <div class="measure-left">
           <div class="measure-number">${index + 1}</div>
-          
+
           <select class="measure-select preset" onchange="handlePresetSelect(${index}, this.value)" onclick="handlePresetClick(${index}, this)" aria-label="Metro">
             <option value="4/4" ${!m.isCustom && m.beats === 4 && m.sub !== 3 ? 'selected' : ''}>4/4</option>
             <option value="2/4" ${!m.isCustom && m.beats === 2 && m.sub !== 3 ? 'selected' : ''}>2/4</option>
@@ -343,30 +343,30 @@
             ${isFirst ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, -1)">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
           </button>
-          
+
           <button type="button" class="icon-btn ${isLast ? 'disabled' : ''}" 
             ${isLast ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, 1)">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
           </button>
-          
+
           <button type="button" class="icon-btn" onclick="resetSingleMeasureAccents(${index})" title="Reset Accenti">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
           </button>
-          
+
           <button type="button" class="icon-btn active-action" onclick="duplicateMeasure(${index})" title="Duplica">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
-          
+
           <button type="button" class="icon-btn ${isOnly ? 'disabled' : ''}" 
             ${isOnly ? 'disabled' : ''} onclick="removeMeasure(${index}, event)" title="Elimina">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
       `;
-      
+
       measuresContainer.appendChild(row);
     });
-    
+
     savePersistedData();
   }
 
@@ -390,7 +390,7 @@
     customBeatsInput.value = m.beats || 5;
     customSubInput.value = m.sub || 4;
     customModal.classList.add('active');
-    
+
     setTimeout(() => {
       customBeatsInput.focus();
       customBeatsInput.select();
@@ -457,7 +457,7 @@
     } else {
       measures[index][key] = parseInt(value, 10);
     }
-    
+
     const totalSubs = measures[index].beatSubs.reduce((a, b) => a + b, 0);
     if (!measures[index].accents) measures[index].accents = [];
     if (measures[index].accents.length > totalSubs) {
@@ -552,15 +552,15 @@
 
   function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
     closeBeatSubPopup();
-    
+
     const popup = document.createElement('div');
     popup.className = 'beat-sub-popup';
-    
+
     const m = measures[measureIndex];
     const currentSub = m.beatSubs[beatIndex];
-    
+
     const subNames = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settime'];
-    
+
     for (let i = 1; i <= 7; i++) {
       const opt = document.createElement('div');
       opt.className = 'sub-popup-option' + (i === currentSub ? ' selected' : '');
@@ -573,8 +573,348 @@
       });
       popup.appendChild(opt);
     }
-    
+
     beatNumberElem.appendChild(popup);
     activeSubPopup = popup;
-    
-    requestAnimation
+
+    requestAnimationFrame(() => {
+      popup.classList.add('active');
+    });
+  }
+
+  function setupBeatLongPress(elem, measureIndex, beatIndex) {
+    let timer = null;
+
+    const start = (e) => {
+      timer = setTimeout(() => {
+        timer = null;
+        showBeatSubPopup(elem, measureIndex, beatIndex);
+      }, 500);
+    };
+
+    const end = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    elem.addEventListener('mousedown', start);
+    elem.addEventListener('touchstart', start, { passive: true });
+    elem.addEventListener('mouseup', end);
+    elem.addEventListener('mouseleave', end);
+    elem.addEventListener('touchend', end);
+    elem.addEventListener('touchcancel', end);
+    elem.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  function updateBeatSubdivision(measureIndex, beatIndex, newSub) {
+    const m = measures[measureIndex];
+    const oldBeatSubs = [...m.beatSubs];
+    const oldTotalSubs = oldBeatSubs.reduce((a, b) => a + b, 0);
+    const oldAccents = m.accents && m.accents.length === oldTotalSubs ? [...m.accents] : new Array(oldTotalSubs).fill(0);
+
+    m.beatSubs[beatIndex] = newSub;
+    const newTotalSubs = m.beatSubs.reduce((a, b) => a + b, 0);
+    const newAccents = new Array(newTotalSubs).fill(0);
+
+    let oldOffset = 0;
+    let newOffset = 0;
+    for (let b = 0; b < m.beats; b++) {
+      const oldSub = oldBeatSubs[b];
+      const newSubVal = m.beatSubs[b];
+      const minSub = Math.min(oldSub, newSubVal);
+      for (let s = 0; s < minSub; s++) {
+        newAccents[newOffset + s] = oldAccents[oldOffset + s];
+      }
+      oldOffset += oldSub;
+      newOffset += newSubVal;
+    }
+
+    m.accents = newAccents;
+    savePersistedData();
+  }
+
+  function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode = false, currentRepeat = -1) {
+    dotsContainer.innerHTML = '';
+
+    if (isCountdownMode) {
+      const remainingBeats = COUNTDOWN_TOTAL - activeSubBeatInBeat;
+      currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
+      movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
+      const group = document.createElement('div');
+      group.className = 'beat-group';
+      for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
+        const dot = document.createElement('div');
+        dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
+        group.appendChild(dot);
+      }
+      dotsContainer.appendChild(group);
+      return;
+    }
+
+    const config = measures[measureIndex];
+    if (!config) return;
+
+    const totalSubs = config.beatSubs.reduce((a, b) => a + b, 0);
+    if (!config.accents || config.accents.length !== totalSubs) {
+      config.accents = new Array(totalSubs).fill(0);
+    }
+
+    const maxRepeats = config.repeat || 1;
+    let repeatText = '';
+    if (maxRepeats === 'inf') {
+      repeatText = ` (Loop)`;
+    } else if (maxRepeats > 1) {
+      const displayRepeat = currentRepeat >= 0 ? (currentRepeat + 1) : 1;
+      repeatText = ` (Ripeti ${displayRepeat}/${maxRepeats})`;
+    }
+
+    currentMeasureBadge.innerText = `Battuta ${measureIndex + 1} di ${measures.length}${repeatText}`;
+
+    const currBeat = activeBeat >= 0 ? activeBeat + 1 : 1;
+    movementDisplay.innerHTML = `MOVIMENTO <span class="highlight">${currBeat}</span> DI ${config.beats}`;
+
+    let globalSubBeatIndex = 0;
+
+    for (let b = 0; b < config.beats; b++) {
+      const group = document.createElement('div');
+      group.className = 'beat-group';
+
+      const beatNumber = document.createElement('div');
+      beatNumber.className = 'beat-number';
+      beatNumber.textContent = b + 1;
+      if (b === activeBeat) beatNumber.classList.add('active-beat');
+      setupBeatLongPress(beatNumber, measureIndex, b);
+      group.appendChild(beatNumber);
+
+      const dotsRow = document.createElement('div');
+      dotsRow.className = 'beat-dots-row';
+
+      for (let s = 0; s < config.beatSubs[b]; s++) {
+        const dotIdx = globalSubBeatIndex;
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+
+        if (s === 0) dot.classList.add('downbeat');
+
+        const state = config.accents[dotIdx] || 0;
+        if (state === 1) dot.classList.add('state-accent');
+        if (state === 2) dot.classList.add('state-mute');
+
+        dot.setAttribute('role', 'button');
+        dot.setAttribute('tabindex', '0');
+        const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
+        dot.setAttribute('aria-label', `Suddivisione ${dotIdx + 1}, stato ${stateLabel}`);
+
+        const cycleState = () => {
+          config.accents[dotIdx] = (state + 1) % 3;
+          renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode, currentRepeat);
+          savePersistedData();
+        };
+        dot.addEventListener('click', cycleState);
+        dot.addEventListener('keydown', (e) => {
+          if (e.code === 'Enter' || e.code === 'Space') {
+            e.preventDefault();
+            cycleState();
+          }
+        });
+
+        if (b === activeBeat && s === activeSubBeatInBeat) dot.classList.add('active');
+
+        dotsRow.appendChild(dot);
+        globalSubBeatIndex++;
+      }
+      group.appendChild(dotsRow);
+      dotsContainer.appendChild(group);
+    }
+
+    document.querySelectorAll('.measure-row').forEach((row, idx) => {
+      row.classList.toggle('current', idx === measureIndex);
+    });
+  }
+
+  function nextNote() {
+    const secondsPerQuarter = 60.0 / bpm;
+
+  if (inCountdown) {
+    countdownBeat++;
+    if (countdownBeat >= COUNTDOWN_TOTAL) {
+      inCountdown = false;
+      currentMeasureIndex = 0;
+      currentBeat = 0;
+      currentSubBeatInBeat = 0;
+      measureRepeatCounter = 0;
+    }
+    nextNoteTime += secondsPerQuarter;
+  } else {
+    const config = measures[currentMeasureIndex];
+    const subDuration = secondsPerQuarter / config.beatSubs[currentBeat];
+    nextNoteTime += subDuration;
+    currentSubBeatInBeat++;
+
+    if (currentSubBeatInBeat >= config.beatSubs[currentBeat]) {
+      currentSubBeatInBeat = 0;
+      currentBeat++;
+
+      if (currentBeat >= config.beats) {
+        currentBeat = 0;
+        measureRepeatCounter++;
+
+        totalCompletedMeasures++; 
+        if (trainerToggle.checked) {
+          const barsTarget = parseInt(trainerBarsInc.value, 10) || 4;
+          if (totalCompletedMeasures % barsTarget === 0) {
+            const bpmInc = parseInt(trainerBpmInc.value, 10) || 2;
+            setValidBpm(bpm + bpmInc);
+          }
+        }
+
+        const maxRepeats = config.repeat || 1;
+        const isInfinite = maxRepeats === 'inf';
+        if (!isInfinite) {
+          const limit = typeof maxRepeats === 'number' ? maxRepeats : parseInt(maxRepeats, 10) || 1;
+          if (measureRepeatCounter >= limit) {
+            measureRepeatCounter = 0;
+            currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
+          }
+        }
+      }
+    }
+  }
+}
+
+function scheduleNote(time) {
+  const soundType = soundWaveSelect.value;
+  const isCountdownStep = inCountdown;
+
+  const capturedMeasureIndex = currentMeasureIndex;
+  const capturedBeat = currentBeat;
+  const capturedSubBeatInBeat = currentSubBeatInBeat;
+  const capturedRepeat = measureRepeatCounter;
+
+  const config = measures[capturedMeasureIndex];
+
+  let globalSubIdx = 0;
+  for (let b = 0; b < capturedBeat; b++) {
+    globalSubIdx += config.beatSubs[b];
+  }
+  globalSubIdx += capturedSubBeatInBeat;
+
+  const isMainBeat = (capturedSubBeatInBeat === 0);
+  const state = (!isCountdownStep && config && config.accents) ? (config.accents[globalSubIdx] || 0) : 0;
+  const isMuted = state === 2;
+  const isAccented = state === 1;
+
+  if (!isMuted) {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    gainNode.connect(masterGainNode);
+
+    const vol = parseFloat(metroVolInput.value);
+    let subVol = isAccented ? 0.95 : (isMainBeat ? 0.75 : 0.45);
+    if (isCountdownStep) subVol = 0.8;
+
+    if (soundType === 'woodblock') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 800 : 600, time);
+      gainNode.gain.setValueAtTime(subVol * vol, time);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
+      osc.connect(gainNode);
+      osc.start(time);
+      osc.stop(time + 0.03);
+
+    } else if (soundType === 'cowbell') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 550 : 420, time);
+      gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+      osc.connect(gainNode);
+      osc.start(time);
+      osc.stop(time + 0.05);
+
+    } else if (soundType === 'rimshot') {
+      const bufferSize = audioCtx.sampleRate * 0.02;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      gainNode.gain.setValueAtTime(subVol * 0.6 * vol, time);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
+      noise.connect(gainNode);
+      noise.start(time);
+
+    } else {
+      osc.type = soundType;
+      osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 700 : 500, time);
+      gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.035);
+      osc.connect(gainNode);
+      osc.start(time);
+      osc.stop(time + 0.035);
+    }
+  }
+
+  const currentStepIndex = isCountdownStep ? countdownBeat : capturedSubBeatInBeat;
+
+  setTimeout(() => {
+    if (isPlaying) {
+      renderDots(isCountdownStep ? 0 : capturedMeasureIndex, 
+                 isCountdownStep ? 0 : capturedBeat, 
+                 isCountdownStep ? countdownBeat : capturedSubBeatInBeat, 
+                 isCountdownStep, 
+                 capturedRepeat);
+    }
+  }, delayMs);
+}
+
+function scheduler() {
+  while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+    scheduleNote(nextNoteTime);
+    nextNote();
+  }
+  timerID = setTimeout(scheduler, lookahead);
+}
+
+function togglePlayback() {
+  initAudioContext();
+  isPlaying = !isPlaying;
+
+  if (isPlaying) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    inCountdown = countdownToggle.checked;
+    countdownBeat = 0;
+    currentMeasureIndex = 0;
+    currentBeat = 0;
+    currentSubBeatInBeat = 0;
+    measureRepeatCounter = 0;
+    totalCompletedMeasures = 0;
+
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    playBtn.innerText = 'FERMA';
+    playBtn.classList.add('playing');
+    scheduler();
+  } else {
+    clearTimeout(timerID);
+    playBtn.innerText = 'AVVIA';
+    playBtn.classList.remove('playing');
+    renderDots(currentMeasureIndex, -1, -1);
+  }
+}
+
+playBtn.addEventListener('click', togglePlayback);
+soundWaveSelect.addEventListener('change', savePersistedData);
+
+document.addEventListener('click', (e) => {
+  if (activeSubPopup && !e.target.closest('.beat-sub-popup') && !e.target.closest('.beat-number')) {
+    closeBeatSubPopup();
+  }
+});
+
+setValidBpm(120);
+updateMasterKnobUI(masterVolume);
+renderMeasuresList();
+renderDots(0, -1, -1);
