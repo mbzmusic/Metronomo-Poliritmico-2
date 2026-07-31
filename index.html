@@ -8,7 +8,7 @@
   <meta name="author" content="Marco Bozzo">
   <meta name="theme-color" content="#0e0e11">
   <title>Metronomo Poliritmico - Marco Bozzo</title>
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
       <h1>Metronomo Poliritmico</h1>
       <span class="author">Creato da Marco Bozzo</span>
     </div>
-    
+
     <div class="master-knob-container">
       <div class="master-label">Volume</div>
       <div class="master-knob" id="masterKnob" title="Trascina in alto/basso o usa le frecce" role="slider" tabindex="0" aria-label="Volume principale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
@@ -42,7 +42,7 @@
       <button class="btn-bpm-step" id="bpmMinus1" type="button" aria-label="Diminuisci di 1 BPM">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
-      
+
       <div class="bpm-value-container">
         <input type="number" class="bpm-value drag-field" id="bpmVal" value="120" min="20" max="300" aria-label="Tempo in battiti per minuto" title="Trascina verso l'alto/basso per regolare">
         <div class="agogica-label" id="agogicaLabel">Allegro</div>
@@ -55,7 +55,7 @@
     </div>
 
     <input type="range" class="bpm-slider" id="bpmSlider" min="20" max="300" value="120" aria-label="Cursore rapido tempo BPM">
-    
+
     <div class="tap-tempo-row">
       <button class="btn-tap" id="tapTempoBtn" type="button" aria-label="Tocca a tempo per calcolare i BPM">TAP TEMPO</button>
       <button class="btn-bpm-micro" id="bpmMinus5" type="button" aria-label="Diminuisci di 5 BPM">&minus;5</button>

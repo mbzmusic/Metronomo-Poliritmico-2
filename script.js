@@ -749,11 +749,13 @@
     nextNoteTime += secondsPerQuarter;
   } else {
     const config = measures[currentMeasureIndex];
-    const subDuration = secondsPerQuarter / config.beatSubs[currentBeat];
+    if (!config) return;
+    const safeBeatSubs = config.beatSubs || new Array(config.beats || 4).fill(config.sub || 2);
+    const subDuration = secondsPerQuarter / (safeBeatSubs[currentBeat] || config.sub || 2);
     nextNoteTime += subDuration;
     currentSubBeatInBeat++;
 
-    if (currentSubBeatInBeat >= config.beatSubs[currentBeat]) {
+    if (currentSubBeatInBeat >= (safeBeatSubs[currentBeat] || config.sub || 2)) {
       currentSubBeatInBeat = 0;
       currentBeat++;
 
@@ -792,12 +794,17 @@ function scheduleNote(time) {
   const capturedBeat = currentBeat;
   const capturedSubBeatInBeat = currentSubBeatInBeat;
   const capturedRepeat = measureRepeatCounter;
+  const capturedCountdownBeat = countdownBeat;
 
   const config = measures[capturedMeasureIndex];
+  if (!config) return;
+
+  const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
 
   let globalSubIdx = 0;
+  const safeBeatSubs = config.beatSubs || new Array(config.beats || 4).fill(config.sub || 2);
   for (let b = 0; b < capturedBeat; b++) {
-    globalSubIdx += config.beatSubs[b];
+    globalSubIdx += safeBeatSubs[b] || config.sub || 2;
   }
   globalSubIdx += capturedSubBeatInBeat;
 
@@ -863,7 +870,7 @@ function scheduleNote(time) {
     if (isPlaying) {
       renderDots(isCountdownStep ? 0 : capturedMeasureIndex, 
                  isCountdownStep ? 0 : capturedBeat, 
-                 isCountdownStep ? countdownBeat : capturedSubBeatInBeat, 
+                 isCountdownStep ? capturedCountdownBeat : capturedSubBeatInBeat, 
                  isCountdownStep, 
                  capturedRepeat);
     }
