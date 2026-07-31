@@ -2,156 +2,269 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Metronomo poliritmico avanzato, accenti e time signature personalizzabili e molto altro!!">
-  <meta name="keywords" content="metronomo, poliritmico, tempo trainer, musica, battute, BPM, Marco Bozzo">
-  <meta name="author" content="Marco Bozzo">
-  <meta name="theme-color" content="#0e0e11">
-  <title>Metronomo Poliritmico - Marco Bozzo</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metronomo - Menu Suddivisioni Ritmiche</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      user-select: none;
+    }
 
-  <link rel="stylesheet" href="style.css">
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #38bdf8;
+      text-align: center;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    /* Contenitore dei 4 battiti principali */
+    .beats-container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .beat-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Pallino del battito (1, 2, 3, 4) */
+    .beat-dot {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 3px solid #3b82f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.1s, background 0.2s, border-color 0.2s;
+    }
+
+    .beat-dot:active {
+      transform: scale(0.92);
+      background: #334155;
+    }
+
+    .subdivision-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+
+    /* Overlay Modal Popup */
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .popup-card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 24px;
+      width: 320px;
+      border: 1px solid #334155;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .popup-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      text-align: center;
+      color: #38bdf8;
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-btn {
+      padding: 12px 16px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #ffffff;
+    }
+
+    .instructions {
+      margin-top: 50px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 16px 20px;
+      border-radius: 10px;
+      max-width: 480px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+  </style>
 </head>
 <body>
 
-<div class="app-container">
-  <header>
-    <div class="brand-title">
-      <h1>Metronomo Poliritmico</h1>
-      <span class="author">Creato da Marco Bozzo</span>
-    </div>
-    
-    <div class="master-knob-container">
-      <div class="master-label">Volume</div>
-      <div class="master-knob" id="masterKnob" title="Trascina in alto/basso o usa le frecce" role="slider" tabindex="0" aria-label="Volume principale" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-        <svg class="knob-ring" viewBox="0 0 40 40">
-          <circle class="bg-circle" cx="20" cy="20" r="13.5" />
-          <circle class="val-circle" id="valCircle" cx="20" cy="20" r="13.5" />
-        </svg>
-        <div class="knob-indicator" id="knobIndicator"></div>
-      </div>
-      <div class="master-value-text" id="masterValueText">50%</div>
-    </div>
-  </header>
+  <h1>Metronomo - Menu Suddivisioni Ritmiche</h1>
+  <p class="subtitle">Tieni premuto su un pallino (1, 2, 3, 4) per impostare la suddivisione (da 1 a 7)</p>
 
-  <div class="bpm-display">
-    <div class="bpm-row-top">
-      <button class="btn-bpm-step" id="bpmMinus1" type="button" aria-label="Diminuisci di 1 BPM">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      </button>
-      
-      <div class="bpm-value-container">
-        <input type="number" class="bpm-value drag-field" id="bpmVal" value="120" min="20" max="300" aria-label="Tempo in battiti per minuto" title="Trascina verso l'alto/basso per regolare">
-        <div class="agogica-label" id="agogicaLabel">Allegro</div>
-        <div class="bpm-label">Battiti per Minuto (BPM)</div>
-      </div>
-
-      <button class="btn-bpm-step" id="bpmPlus1" type="button" aria-label="Aumenta di 1 BPM">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      </button>
+  <div class="beats-container">
+    <div class="beat-wrapper">
+      <div class="beat-dot" data-beat="1">1</div>
+      <span class="subdivision-label" id="label-1">1 - Quarti</span>
     </div>
-
-    <input type="range" class="bpm-slider" id="bpmSlider" min="20" max="300" value="120" aria-label="Cursore rapido tempo BPM">
-    
-    <div class="tap-tempo-row">
-      <button class="btn-tap" id="tapTempoBtn" type="button" aria-label="Tocca a tempo per calcolare i BPM">TAP TEMPO</button>
-      <button class="btn-bpm-micro" id="bpmMinus5" type="button" aria-label="Diminuisci di 5 BPM">&minus;5</button>
-      <button class="btn-bpm-micro" id="bpmPlus5" type="button" aria-label="Aumenta di 5 BPM">+5</button>
+    <div class="beat-wrapper">
+      <div class="beat-dot" data-beat="2">2</div>
+      <span class="subdivision-label" id="label-2">1 - Quarti</span>
+    </div>
+    <div class="beat-wrapper">
+      <div class="beat-dot" data-beat="3">3</div>
+      <span class="subdivision-label" id="label-3">1 - Quarti</span>
+    </div>
+    <div class="beat-wrapper">
+      <div class="beat-dot" data-beat="4">4</div>
+      <span class="subdivision-label" id="label-4">1 - Quarti</span>
     </div>
   </div>
 
-  <div class="visualizer">
-    <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
-    <div class="beat-dots" id="dotsContainer"></div>
-    <div class="dot-hint">Clicca sul pallino per: Normale (Grigio) &rarr; Accento (Arancione) &rarr; Muto (Rosso)</div>
-    <div class="beat-movement-display" id="movementDisplay">MOVIMENTO <span class="highlight">1</span> DI 4</div>
+  <div class="instructions">
+    💡 <strong>Istruzioni:</strong>
+    <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+      <li>Effettua un <strong>pressione prolungata (Long Press)</strong> di 400ms su uno dei pallini.</li>
+      <li>Seleziona dal menu popup la suddivisione ritmica desiderata (da 1 a 7).</li>
+    </ul>
   </div>
 
-  <div class="settings-panel">
-    <label class="toggle-row">
-      <input type="checkbox" id="countdownToggle" checked>
-      Countdown iniziale (4 battiti)
-    </label>
-
-    <label class="toggle-row">
-      <input type="checkbox" id="trainerToggle">
-      Tempo Trainer (Incremento automatico)
-    </label>
-    <div class="setting-row" id="trainerConfigRow" style="opacity: 0.5;">
-      <label>Aumenta di:</label>
-      <div class="trainer-inputs">
-        <input type="number" class="drag-field" id="trainerBpmInc" value="2" min="1" max="20" title="Trascina verso l'alto/basso per regolare"> BPM ogni 
-        <input type="number" class="drag-field" id="trainerBarsInc" value="4" min="1" max="32" title="Trascina verso l'alto/basso per regolare"> Battute
-      </div>
-    </div>
-
-    <div class="setting-row">
-      <label>Suono Suddivisioni:</label>
-      <select id="soundWaveSelect">
-        <optgroup label="Sintetizzati">
-          <option value="sine" selected>Sinusoidale (Morbido)</option>
-          <option value="triangle">Triangolare (Legnoso)</option>
-          <option value="square">Quadrata (8-bit)</option>
-        </optgroup>
-        <optgroup label="Campioni / Percussioni">
-          <option value="woodblock">Woodblock (Legnetto)</option>
-          <option value="cowbell">Cowbell (Campaccio)</option>
-          <option value="rimshot">Rimshot (Rullante)</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="setting-row">
-      <label>Vol. Metronomo:</label>
-      <input type="range" id="metroVol" min="0" max="1" step="0.05" value="0.8">
+  <!-- Popup Ritmico -->
+  <div class="popup-overlay" id="popupOverlay">
+    <div class="popup-card">
+      <div class="popup-title" id="popupTitle">Suddivisione Battito</div>
+      <div class="options-grid" id="optionsGrid"></div>
     </div>
   </div>
 
-  <div class="section-title-bar">
-    <h2>Sequenza Battute</h2>
-    <div style="display: flex; gap: 6px;">
-      <button class="btn-action" id="resetSequenceBtn" type="button" title="Ripristina 4/4 crome e 4/4 quartine">Reset Default</button>
-      <button class="btn-action" id="resetAccentsBtn" type="button" title="Azzera tutti gli accenti">Reset accenti</button>
-    </div>
-  </div>
+  <script>
+    const subdivisions = [
+      { val: 1, name: "1 - Quarti (1/4)" },
+      { val: 2, name: "2 - Ottavi (Duina)" },
+      { val: 3, name: "3 - Terzine" },
+      { val: 4, name: "4 - Sedicesimi (Quartina)" },
+      { val: 5, name: "5 - Quintine" },
+      { val: 6, name: "6 - Sestine" },
+      { val: 7, name: "7 - Settimine" }
+    ];
 
-  <div class="measures-list" id="measuresContainer"></div>
+    const beatSettings = { 1: 1, 2: 1, 3: 1, 4: 1 };
+    let currentActiveBeat = null;
+    let timer = null;
+    const LONG_PRESS_DURATION = 400; // ms
 
-  <button class="btn-add" id="addMeasureBtn" type="button" aria-label="Aggiungi una nuova battuta">+ AGGIUNGI BATTUTA</button>
+    const overlay = document.getElementById('popupOverlay');
+    const optionsGrid = document.getElementById('optionsGrid');
+    const popupTitle = document.getElementById('popupTitle');
 
-  <div class="controls-sticky">
-    <div class="controls">
-      <button class="btn-play" id="playBtn" type="button" aria-label="Avvia o ferma il metronomo">AVVIA</button>
-      <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
-    </div>
-  </div>
-</div>
+    function initPopup() {
+      optionsGrid.innerHTML = '';
+      subdivisions.forEach(sub => {
+        const btn = document.createElement('div');
+        btn.className = 'option-btn';
+        btn.innerHTML = `<span>${sub.name}</span>`;
+        btn.onclick = () => selectSubdivision(sub.val);
+        optionsGrid.appendChild(btn);
+      });
+    }
 
-<div class="custom-modal-overlay" id="customModal">
-  <div class="custom-modal-box">
-    <div class="modal-title">Metro Personalizzato</div>
-    <div class="modal-inputs-row">
-      <div class="modal-field">
-        <label>Numeratore</label>
-        <input type="number" class="drag-field" id="customBeatsInput" min="1" max="64" value="5" title="Trascina verso l'alto/basso per regolare">
-      </div>
-      <span class="modal-slash">/</span>
-      <div class="modal-field">
-        <label>Denominatore</label>
-        <input type="number" class="drag-field" id="customSubInput" min="1" max="64" value="4" title="Trascina verso l'alto/basso per regolare">
-      </div>
-    </div>
-    <div class="modal-buttons">
-      <button type="button" class="btn-modal-cancel" id="customModalCancel">Annulla</button>
-      <button type="button" class="btn-modal-save" id="customModalSave">OK</button>
-    </div>
-  </div>
-</div>
+    function openPopup(beatNum) {
+      currentActiveBeat = beatNum;
+      popupTitle.innerText = `Suddivisione Battito ${beatNum}`;
+      overlay.style.display = 'flex';
+    }
 
-<script src="script.js"></script>
+    function closePopup() {
+      overlay.style.display = 'none';
+      currentActiveBeat = null;
+    }
 
+    function selectSubdivision(val) {
+      if (currentActiveBeat) {
+        beatSettings[currentActiveBeat] = val;
+        const subObj = subdivisions.find(s => s.val === val);
+        document.getElementById(`label-${currentActiveBeat}`).innerText = subObj.name;
+      }
+      closePopup();
+    }
+
+    document.querySelectorAll('.beat-dot').forEach(dot => {
+      const beatNum = dot.getAttribute('data-beat');
+
+      const startPress = () => {
+        timer = setTimeout(() => {
+          openPopup(beatNum);
+        }, LONG_PRESS_DURATION);
+      };
+
+      const cancelPress = () => {
+        if (timer) clearTimeout(timer);
+      };
+
+      dot.addEventListener('mousedown', startPress);
+      dot.addEventListener('mouseup', cancelPress);
+      dot.addEventListener('mouseleave', cancelPress);
+
+      dot.addEventListener('touchstart', startPress, { passive: true });
+      dot.addEventListener('touchend', cancelPress);
+      dot.addEventListener('touchmove', cancelPress);
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closePopup();
+    });
+
+    initPopup();
+  </script>
 </body>
 </html>
