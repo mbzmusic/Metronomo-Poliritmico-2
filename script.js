@@ -22,6 +22,8 @@
   const lookahead = 25.0;
   const scheduleAheadTime = 0.1;
   let timerID = null;
+  let uiTimerID = null;
+  let uiNotes = [];
   let activeSubPopup = null;
 
   let measures = [
@@ -661,17 +663,14 @@
       const remainingBeats = COUNTDOWN_TOTAL - activeSubBeatInBeat;
       currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
       movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
-      const group = document.createElement('div');
-      group.className = 'beat-group';
-      const dotsRow = document.createElement('div');
-      dotsRow.className = 'beat-dots-row';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'countdown-wrapper';
       for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
         const dot = document.createElement('div');
         dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
-        dotsRow.appendChild(dot);
+        wrapper.appendChild(dot);
       }
-      group.appendChild(dotsRow);
-      dotsContainer.appendChild(group);
+      dotsContainer.appendChild(wrapper);
       return;
     }
 
@@ -821,7 +820,6 @@ function scheduleNote(time) {
   const config = measures[capturedMeasureIndex];
   if (!config) return;
 
-  const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
 
   let globalSubIdx = 0;
   const safeBeatSubs = config.beatSubs || new Array(config.beats || 4).fill(config.sub || 2);
@@ -886,17 +884,14 @@ function scheduleNote(time) {
     }
   }
 
-  const currentStepIndex = isCountdownStep ? countdownBeat : capturedSubBeatInBeat;
-
-  setTimeout(() => {
-    if (isPlaying) {
-      renderDots(isCountdownStep ? 0 : capturedMeasureIndex, 
-                 isCountdownStep ? 0 : capturedBeat, 
-                 isCountdownStep ? capturedCountdownBeat : capturedSubBeatInBeat, 
-                 isCountdownStep, 
-                 capturedRepeat);
-    }
-  }, delayMs);
+  uiNotes.push({
+    time: time,
+    measureIndex: isCountdownStep ? 0 : capturedMeasureIndex,
+    beat: isCountdownStep ? 0 : capturedBeat,
+    subBeatInBeat: isCountdownStep ? capturedCountdownBeat : capturedSubBeatInBeat,
+    isCountdown: isCountdownStep,
+    repeat: capturedRepeat
+  });
 }
 
 function scheduler() {
@@ -905,6 +900,20 @@ function scheduler() {
     nextNote();
   }
   timerID = setTimeout(scheduler, lookahead);
+}
+
+function updateUI() {
+  if (!isPlaying || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  // Trova tutte le note il cui tempo è già passato
+  const notesToRender = uiNotes.filter(n => n.time <= now);
+  if (notesToRender.length > 0) {
+    // Prendi l'ultima nota (la più recente) per evitare flickering
+    const note = notesToRender[notesToRender.length - 1];
+    renderDots(note.measureIndex, note.beat, note.subBeatInBeat, note.isCountdown, note.repeat);
+    // Rimuovi tutte le note consumate
+    uiNotes = uiNotes.filter(n => n.time > now);
+  }
 }
 
 function togglePlayback() {
@@ -923,11 +932,15 @@ function togglePlayback() {
     totalCompletedMeasures = 0;
 
     nextNoteTime = audioCtx.currentTime + 0.05;
+    uiNotes = [];
     playBtn.innerText = 'FERMA';
     playBtn.classList.add('playing');
     scheduler();
+    uiTimerID = setInterval(updateUI, 25);
   } else {
     clearTimeout(timerID);
+    clearInterval(uiTimerID);
+    uiNotes = [];
     playBtn.innerText = 'AVVIA';
     playBtn.classList.remove('playing');
     renderDots(currentMeasureIndex, -1, -1);
