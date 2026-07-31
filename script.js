@@ -1,4 +1,4 @@
-  // ... (Tutto il codice JavaScript rimane invariato)
+// ... (Tutto il codice JavaScript rimane invariato)
   let audioCtx = null;
   let masterGainNode = null;
   let isPlaying = false;
@@ -13,6 +13,8 @@
 
   let currentMeasureIndex = 0;
   let currentSubBeat = 0;
+  let currentBeat = 0;
+  let currentSubBeatInBeat = 0;
   let totalCompletedMeasures = 0;
   let measureRepeatCounter = 0;
 
@@ -20,10 +22,11 @@
   const lookahead = 25.0;
   const scheduleAheadTime = 0.1;
   let timerID = null;
+  let activeSubPopup = null;
 
   let measures = [
-    { beats: 4, sub: 2, repeat: 1, accents: [], isCustom: false },
-    { beats: 4, sub: 4, repeat: 1, accents: [], isCustom: false }
+    { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
+    { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
   ];
 
   let targetCustomIndex = null;
@@ -63,18 +66,24 @@
 
   function loadPersistedData() {
     try {
-      const savedMeasures = localStorage.getItem('metronome_measures_v4');
+      const savedMeasures = localStorage.getItem('metronome_measures_v5');
       if (savedMeasures) {
         const parsed = JSON.parse(savedMeasures);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          measures = parsed.map(m => ({
-            ...m,
-            repeat: m.repeat === undefined ? 1 : m.repeat
-          }));
+          measures = parsed.map(m => {
+            if (!m.beatSubs && m.sub) {
+              m.beatSubs = new Array(m.beats || 4).fill(m.sub);
+            }
+            return {
+              ...m,
+              repeat: m.repeat === undefined ? 1 : m.repeat,
+              beatSubs: m.beatSubs || new Array(m.beats || 4).fill(m.sub || 2)
+            };
+          });
         }
       }
       if (measures.length < 2) {
-        measures.push({ beats: 4, sub: 4, repeat: 1, accents: [], isCustom: false });
+        measures.push({ beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false });
       }
 
       // IL BPM PARTE SEMPRE DA 120 DEFAULT
@@ -92,7 +101,7 @@
 
   function savePersistedData() {
     try {
-      localStorage.setItem('metronome_measures_v4', JSON.stringify(measures));
+      localStorage.setItem('metronome_measures_v5', JSON.stringify(measures));
       localStorage.setItem('metronome_vol_v4', masterVolume);
       localStorage.setItem('metronome_sound_v4', soundWaveSelect.value);
     } catch (e) {
@@ -272,7 +281,7 @@
     currentMeasureIndex = index;
     measureRepeatCounter = 0;
     renderMeasuresList();
-    renderDots(currentMeasureIndex, -1);
+    renderDots(currentMeasureIndex, -1, -1);
   }
 
   function renderMeasuresList() {
@@ -295,8 +304,6 @@
       const repeatOptions = [1,2,3,4,5,6,7,8,9,10].map(r => `<option value="${r}" ${m.repeat === r ? 'selected' : ''}>×${r}</option>`).join('') + `<option value="inf" ${m.repeat === 'inf' ? 'selected' : ''}>Loop</option>`;
       const customLabel = m.isCustom ? `${m.beats}/${m.sub}` : 'Custom...';
 
-      // --- MODIFICA STRUTTURA HTML ---
-      // Ho raggruppato gli elementi in due sotto-div: "measure-left" e "measure-right"
       row.innerHTML = `
         <div class="measure-left">
           <div class="measure-number">${index + 1}</div>
@@ -356,7 +363,6 @@
           </button>
         </div>
       `;
-      // --- FINE MODIFICA STRUTTURA HTML ---
       
       measuresContainer.appendChild(row);
     });
@@ -409,6 +415,7 @@
         measures[targetCustomIndex].beats = b;
         measures[targetCustomIndex].sub = s;
         measures[targetCustomIndex].isCustom = true;
+        measures[targetCustomIndex].beatSubs = new Array(b).fill(s);
 
         const totalSubs = b * s;
         if (!measures[targetCustomIndex].accents) measures[targetCustomIndex].accents = [];
@@ -421,13 +428,14 @@
     }
     closeCustomModal();
     renderMeasuresList();
-    if (!isPlaying) renderDots(currentMeasureIndex, -1);
+    if (!isPlaying) renderDots(currentMeasureIndex, -1, -1);
   });
 
   window.resetSingleMeasureAccents = function(index) {
     const m = measures[index];
-    m.accents = new Array(m.beats * m.sub).fill(0);
-    if (!isPlaying) renderDots(currentMeasureIndex, -1);
+    const totalSubs = m.beatSubs.reduce((a, b) => a + b, 0);
+    m.accents = new Array(totalSubs).fill(0);
+    if (!isPlaying) renderDots(currentMeasureIndex, -1, -1);
     savePersistedData();
   };
 
@@ -440,13 +448,17 @@
       if (value === '6/8') { measures[index].beats = 2; measures[index].sub = 3; }
       if (value === '7/8') { measures[index].beats = 7; measures[index].sub = 2; }
       if (value === '12/8') { measures[index].beats = 4; measures[index].sub = 3; }
+      measures[index].beatSubs = new Array(measures[index].beats).fill(measures[index].sub);
+    } else if (key === 'sub') {
+      measures[index].sub = parseInt(value, 10);
+      measures[index].beatSubs = new Array(measures[index].beats).fill(parseInt(value, 10));
     } else if (key === 'repeat') {
       measures[index].repeat = value === 'inf' ? 'inf' : parseInt(value, 10);
     } else {
       measures[index][key] = parseInt(value, 10);
     }
     
-    const totalSubs = measures[index].beats * measures[index].sub;
+    const totalSubs = measures[index].beatSubs.reduce((a, b) => a + b, 0);
     if (!measures[index].accents) measures[index].accents = [];
     if (measures[index].accents.length > totalSubs) {
       measures[index].accents = measures[index].accents.slice(0, totalSubs);
@@ -455,7 +467,7 @@
     }
 
     renderMeasuresList();
-    if (!isPlaying) renderDots(currentMeasureIndex, -1);
+    if (!isPlaying) renderDots(currentMeasureIndex, -1, -1);
   };
 
   window.duplicateMeasure = function(index) {
@@ -464,12 +476,13 @@
     measures.splice(index + 1, 0, {
       beats: target.beats,
       sub: target.sub,
+      beatSubs: [...(target.beatSubs || new Array(target.beats).fill(target.sub || 2))],
       repeat: target.repeat || 1,
       accents: [...target.accents],
       isCustom: target.isCustom || false
     });
     renderMeasuresList();
-    renderDots(currentMeasureIndex, -1);
+    renderDots(currentMeasureIndex, -1, -1);
   };
 
   window.moveMeasureOrder = function(index, direction) {
@@ -480,13 +493,20 @@
     measures.splice(newIdx, 0, item);
     currentMeasureIndex = newIdx;
     renderMeasuresList();
-    renderDots(currentMeasureIndex, -1);
+    renderDots(currentMeasureIndex, -1, -1);
   };
 
   addMeasureBtn.addEventListener('click', () => {
     if (isPlaying) return;
-    const last = measures[measures.length - 1] || { beats: 4, sub: 2, repeat: 1, isCustom: false };
-    measures.push({ beats: last.beats, sub: last.sub, repeat: 1, accents: [], isCustom: last.isCustom });
+    const last = measures[measures.length - 1] || { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, isCustom: false };
+    measures.push({ 
+      beats: last.beats, 
+      sub: last.sub, 
+      beatSubs: [...(last.beatSubs || new Array(last.beats).fill(last.sub || 2))],
+      repeat: 1, 
+      accents: [], 
+      isCustom: last.isCustom 
+    });
     renderMeasuresList();
     selectMeasure(measures.length - 1);
   });
@@ -498,42 +518,135 @@
     measures.splice(index, 1);
     if (currentMeasureIndex >= measures.length) currentMeasureIndex = measures.length - 1;
     renderMeasuresList();
-    renderDots(currentMeasureIndex, -1);
+    renderDots(currentMeasureIndex, -1, -1);
   };
 
   resetAccentsBtn.addEventListener('click', () => {
     measures.forEach(m => {
-      m.accents = new Array(m.beats * m.sub).fill(0);
+      const totalSubs = m.beatSubs.reduce((a, b) => a + b, 0);
+      m.accents = new Array(totalSubs).fill(0);
     });
-    if (!isPlaying) renderDots(currentMeasureIndex, -1);
+    if (!isPlaying) renderDots(currentMeasureIndex, -1, -1);
     savePersistedData();
   });
 
   resetSequenceBtn.addEventListener('click', () => {
     if (isPlaying) return;
     measures = [
-      { beats: 4, sub: 2, repeat: 1, accents: [], isCustom: false },
-      { beats: 4, sub: 4, repeat: 1, accents: [], isCustom: false }
+      { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
+      { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
     ];
     currentMeasureIndex = 0;
     measureRepeatCounter = 0;
     renderMeasuresList();
-    renderDots(0, -1);
+    renderDots(0, -1, -1);
     savePersistedData();
   });
 
-  function renderDots(measureIndex, activeSubBeat, isCountdownMode = false, currentRepeat = -1) {
+  function closeBeatSubPopup() {
+    if (activeSubPopup) {
+      activeSubPopup.remove();
+      activeSubPopup = null;
+    }
+  }
+
+  function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
+    closeBeatSubPopup();
+    
+    const popup = document.createElement('div');
+    popup.className = 'beat-sub-popup';
+    
+    const m = measures[measureIndex];
+    const currentSub = m.beatSubs[beatIndex];
+    
+    const subNames = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settime'];
+    
+    for (let i = 1; i <= 7; i++) {
+      const opt = document.createElement('div');
+      opt.className = 'sub-popup-option' + (i === currentSub ? ' selected' : '');
+      opt.textContent = subNames[i];
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateBeatSubdivision(measureIndex, beatIndex, i);
+        renderDots(measureIndex, -1, -1);
+        closeBeatSubPopup();
+      });
+      popup.appendChild(opt);
+    }
+    
+    beatNumberElem.appendChild(popup);
+    activeSubPopup = popup;
+    
+    requestAnimationFrame(() => {
+      popup.classList.add('active');
+    });
+  }
+
+  function setupBeatLongPress(elem, measureIndex, beatIndex) {
+    let timer = null;
+    
+    const start = (e) => {
+      timer = setTimeout(() => {
+        timer = null;
+        showBeatSubPopup(elem, measureIndex, beatIndex);
+      }, 500);
+    };
+    
+    const end = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+    
+    elem.addEventListener('mousedown', start);
+    elem.addEventListener('touchstart', start, { passive: true });
+    elem.addEventListener('mouseup', end);
+    elem.addEventListener('mouseleave', end);
+    elem.addEventListener('touchend', end);
+    elem.addEventListener('touchcancel', end);
+    elem.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  function updateBeatSubdivision(measureIndex, beatIndex, newSub) {
+    const m = measures[measureIndex];
+    const oldBeatSubs = [...m.beatSubs];
+    const oldTotalSubs = oldBeatSubs.reduce((a, b) => a + b, 0);
+    const oldAccents = m.accents && m.accents.length === oldTotalSubs ? [...m.accents] : new Array(oldTotalSubs).fill(0);
+    
+    m.beatSubs[beatIndex] = newSub;
+    const newTotalSubs = m.beatSubs.reduce((a, b) => a + b, 0);
+    const newAccents = new Array(newTotalSubs).fill(0);
+    
+    let oldOffset = 0;
+    let newOffset = 0;
+    for (let b = 0; b < m.beats; b++) {
+      const oldSub = oldBeatSubs[b];
+      const newSubVal = m.beatSubs[b];
+      const minSub = Math.min(oldSub, newSubVal);
+      for (let s = 0; s < minSub; s++) {
+        newAccents[newOffset + s] = oldAccents[oldOffset + s];
+      }
+      oldOffset += oldSub;
+      newOffset += newSubVal;
+    }
+    
+    m.accents = newAccents;
+    savePersistedData();
+  }
+
+  function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode = false, currentRepeat = -1) {
     dotsContainer.innerHTML = '';
 
     if (isCountdownMode) {
-      const remainingBeats = COUNTDOWN_TOTAL - activeSubBeat;
+      const remainingBeats = COUNTDOWN_TOTAL - activeSubBeatInBeat;
       currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
-      movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
+      movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
       const group = document.createElement('div');
       group.className = 'beat-group';
       for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
         const dot = document.createElement('div');
-        dot.className = `dot downbeat ${i === activeSubBeat ? 'active' : ''}`;
+        dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
         group.appendChild(dot);
       }
       dotsContainer.appendChild(group);
@@ -543,7 +656,7 @@
     const config = measures[measureIndex];
     if (!config) return;
 
-    const totalSubs = config.beats * config.sub;
+    const totalSubs = config.beatSubs.reduce((a, b) => a + b, 0);
     if (!config.accents || config.accents.length !== totalSubs) {
       config.accents = new Array(totalSubs).fill(0);
     }
@@ -559,7 +672,7 @@
 
     currentMeasureBadge.innerText = `Battuta ${measureIndex + 1} di ${measures.length}${repeatText}`;
     
-    const currBeat = activeSubBeat >= 0 ? Math.floor(activeSubBeat / config.sub) + 1 : 1;
+    const currBeat = activeBeat >= 0 ? activeBeat + 1 : 1;
     movementDisplay.innerHTML = `MOVIMENTO <span class="highlight">${currBeat}</span> DI ${config.beats}`;
 
     let globalSubBeatIndex = 0;
@@ -568,7 +681,17 @@
       const group = document.createElement('div');
       group.className = 'beat-group';
 
-      for (let s = 0; s < config.sub; s++) {
+      const beatNumber = document.createElement('div');
+      beatNumber.className = 'beat-number';
+      beatNumber.textContent = b + 1;
+      if (b === activeBeat) beatNumber.classList.add('active-beat');
+      setupBeatLongPress(beatNumber, measureIndex, b);
+      group.appendChild(beatNumber);
+
+      const dotsRow = document.createElement('div');
+      dotsRow.className = 'beat-dots-row';
+
+      for (let s = 0; s < config.beatSubs[b]; s++) {
         const dotIdx = globalSubBeatIndex;
         const dot = document.createElement('div');
         dot.className = 'dot';
@@ -586,7 +709,7 @@
 
         const cycleState = () => {
           config.accents[dotIdx] = (state + 1) % 3;
-          renderDots(measureIndex, activeSubBeat, isCountdownMode, currentRepeat);
+          renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode, currentRepeat);
           savePersistedData();
         };
         dot.addEventListener('click', cycleState);
@@ -597,11 +720,12 @@
           }
         });
 
-        if (dotIdx === activeSubBeat) dot.classList.add('active');
+        if (b === activeBeat && s === activeSubBeatInBeat) dot.classList.add('active');
 
-        group.appendChild(dot);
+        dotsRow.appendChild(dot);
         globalSubBeatIndex++;
       }
+      group.appendChild(dotsRow);
       dotsContainer.appendChild(group);
     }
 
@@ -618,36 +742,42 @@
     if (countdownBeat >= COUNTDOWN_TOTAL) {
       inCountdown = false;
       currentMeasureIndex = 0;
-      currentSubBeat = 0;
+      currentBeat = 0;
+      currentSubBeatInBeat = 0;
       measureRepeatCounter = 0;
     }
     nextNoteTime += secondsPerQuarter;
   } else {
     const config = measures[currentMeasureIndex];
-    const subDuration = config.sub === 3 ? (secondsPerQuarter / 3) : (secondsPerQuarter / config.sub);
+    const subDuration = secondsPerQuarter / config.beatSubs[currentBeat];
     nextNoteTime += subDuration;
-    currentSubBeat++;
+    currentSubBeatInBeat++;
 
-    if (currentSubBeat >= config.beats * config.sub) {
-      currentSubBeat = 0;
-      measureRepeatCounter++;
+    if (currentSubBeatInBeat >= config.beatSubs[currentBeat]) {
+      currentSubBeatInBeat = 0;
+      currentBeat++;
       
-      totalCompletedMeasures++; 
-      if (trainerToggle.checked) {
-        const barsTarget = parseInt(trainerBarsInc.value, 10) || 4;
-        if (totalCompletedMeasures % barsTarget === 0) {
-          const bpmInc = parseInt(trainerBpmInc.value, 10) || 2;
-          setValidBpm(bpm + bpmInc);
+      if (currentBeat >= config.beats) {
+        currentBeat = 0;
+        measureRepeatCounter++;
+        
+        totalCompletedMeasures++; 
+        if (trainerToggle.checked) {
+          const barsTarget = parseInt(trainerBarsInc.value, 10) || 4;
+          if (totalCompletedMeasures % barsTarget === 0) {
+            const bpmInc = parseInt(trainerBpmInc.value, 10) || 2;
+            setValidBpm(bpm + bpmInc);
+          }
         }
-      }
 
-      const maxRepeats = config.repeat || 1;
-      const isInfinite = maxRepeats === 'inf';
-      if (!isInfinite) {
-        const limit = typeof maxRepeats === 'number' ? maxRepeats : parseInt(maxRepeats, 10) || 1;
-        if (measureRepeatCounter >= limit) {
-          measureRepeatCounter = 0;
-          currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
+        const maxRepeats = config.repeat || 1;
+        const isInfinite = maxRepeats === 'inf';
+        if (!isInfinite) {
+          const limit = typeof maxRepeats === 'number' ? maxRepeats : parseInt(maxRepeats, 10) || 1;
+          if (measureRepeatCounter >= limit) {
+            measureRepeatCounter = 0;
+            currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
+          }
         }
       }
     }
@@ -659,14 +789,20 @@ function scheduleNote(time) {
   const isCountdownStep = inCountdown;
   
   const capturedMeasureIndex = currentMeasureIndex;
-  const capturedSubBeat = currentSubBeat;
+  const capturedBeat = currentBeat;
+  const capturedSubBeatInBeat = currentSubBeatInBeat;
   const capturedRepeat = measureRepeatCounter;
 
   const config = measures[capturedMeasureIndex];
-  const subIdx = capturedSubBeat;
 
-  const isMainBeat = (subIdx % config.sub === 0);
-  const state = (!isCountdownStep && config && config.accents) ? (config.accents[subIdx] || 0) : 0;
+  let globalSubIdx = 0;
+  for (let b = 0; b < capturedBeat; b++) {
+    globalSubIdx += config.beatSubs[b];
+  }
+  globalSubIdx += capturedSubBeatInBeat;
+
+  const isMainBeat = (capturedSubBeatInBeat === 0);
+  const state = (!isCountdownStep && config && config.accents) ? (config.accents[globalSubIdx] || 0) : 0;
   const isMuted = state === 2;
   const isAccented = state === 1;
 
@@ -721,12 +857,15 @@ function scheduleNote(time) {
     }
   }
 
-  const currentStepIndex = isCountdownStep ? countdownBeat : capturedSubBeat;
-  const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
+  const currentStepIndex = isCountdownStep ? countdownBeat : capturedSubBeatInBeat;
   
   setTimeout(() => {
     if (isPlaying) {
-      renderDots(isCountdownStep ? 0 : capturedMeasureIndex, currentStepIndex, isCountdownStep, capturedRepeat);
+      renderDots(isCountdownStep ? 0 : capturedMeasureIndex, 
+                 isCountdownStep ? 0 : capturedBeat, 
+                 isCountdownStep ? countdownBeat : capturedSubBeatInBeat, 
+                 isCountdownStep, 
+                 capturedRepeat);
     }
   }, delayMs);
 }
@@ -749,7 +888,8 @@ function togglePlayback() {
     inCountdown = countdownToggle.checked;
     countdownBeat = 0;
     currentMeasureIndex = 0;
-    currentSubBeat = 0;
+    currentBeat = 0;
+    currentSubBeatInBeat = 0;
     measureRepeatCounter = 0;
     totalCompletedMeasures = 0;
 
@@ -761,14 +901,20 @@ function togglePlayback() {
     clearTimeout(timerID);
     playBtn.innerText = 'AVVIA';
     playBtn.classList.remove('playing');
-    renderDots(currentMeasureIndex, -1);
+    renderDots(currentMeasureIndex, -1, -1);
   }
 }
 
 playBtn.addEventListener('click', togglePlayback);
 soundWaveSelect.addEventListener('change', savePersistedData);
 
+document.addEventListener('click', (e) => {
+  if (activeSubPopup && !e.target.closest('.beat-sub-popup') && !e.target.closest('.beat-number')) {
+    closeBeatSubPopup();
+  }
+});
+
 setValidBpm(120);
 updateMasterKnobUI(masterVolume);
 renderMeasuresList();
-renderDots(0, -1);
+renderDots(0, -1, -1);
