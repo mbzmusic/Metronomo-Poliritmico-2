@@ -662,12 +662,15 @@
       currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
       movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
       const group = document.createElement('div');
-      group.className = 'beat-group countdown-group';
+      group.className = 'beat-group';
+      const dotsRow = document.createElement('div');
+      dotsRow.className = 'beat-dots-row';
       for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
         const dot = document.createElement('div');
         dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
-        group.appendChild(dot);
+        dotsRow.appendChild(dot);
       }
+      group.appendChild(dotsRow);
       dotsContainer.appendChild(group);
       return;
     }

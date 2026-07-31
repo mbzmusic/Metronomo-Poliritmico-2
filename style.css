@@ -1028,15 +1028,7 @@
       opacity: 0.85;
     }
 
-    /* Countdown vertical layout */
-.countdown-group {
-  flex-direction: column !important;
-  gap: 14px !important;
-  padding: 1rem 0.6rem !important;
-  min-width: 60px;
-}
-
-@media (max-width: 550px) {
+    @media (max-width: 550px) {
       .measure-row {
         flex-direction: column;
         align-items: stretch;
