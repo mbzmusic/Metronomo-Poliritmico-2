@@ -450,8 +450,26 @@
       if (value === '12/8') { measures[index].beats = 4; measures[index].sub = 3; }
       measures[index].beatSubs = new Array(measures[index].beats).fill(measures[index].sub);
     } else if (key === 'sub') {
-      measures[index].sub = parseInt(value, 10);
-      measures[index].beatSubs = new Array(measures[index].beats).fill(parseInt(value, 10));
+      const subVal = parseInt(value, 10);
+      measures[index].sub = subVal;
+      measures[index].beatSubs = new Array(measures[index].beats).fill(subVal);
+      // Auto-converti in metro composto se si scelgono terzine
+      if (subVal === 3) {
+        if (measures[index].beats === 2) {
+          measures[index].isCustom = false; // 6/8
+        } else if (measures[index].beats === 3) {
+          measures[index].isCustom = true;  // 9/8 (non in preset)
+        } else if (measures[index].beats === 4) {
+          measures[index].isCustom = false; // 12/8
+        }
+      } else if (subVal === 2) {
+        // Se si torna a crome da un metro composto, riconverti in semplice
+        if (measures[index].beats === 2) {
+          measures[index].isCustom = false; // 2/4
+        } else if (measures[index].beats === 4) {
+          measures[index].isCustom = false; // 4/4
+        }
+      }
     } else if (key === 'repeat') {
       measures[index].repeat = value === 'inf' ? 'inf' : parseInt(value, 10);
     } else {
@@ -538,6 +556,7 @@
     ];
     currentMeasureIndex = 0;
     measureRepeatCounter = 0;
+    setValidBpm(120);
     renderMeasuresList();
     renderDots(0, -1, -1);
     savePersistedData();
@@ -643,7 +662,7 @@
       currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
       movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
       const group = document.createElement('div');
-      group.className = 'beat-group';
+      group.className = 'beat-group countdown-group';
       for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
         const dot = document.createElement('div');
         dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
