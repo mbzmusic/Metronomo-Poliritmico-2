@@ -19,9 +19,19 @@ Un metronomo poliritmico professionale e completamente web-based, progettato per
 - **🔔 Campioni Audio** — Scegli tra suoni sintetizzati (Sinusoidale, Triangolare, Quadrata) o percussivi (Woodblock, Cowbell, Rimshot).
 - **🔊 Volume Master Interattivo** — Knob draggabile per il controllo del volume generale.
 - **⏳ Countdown Iniziale** — 4 battiti di preparazione prima dell'avvio effettivo.
-- **💾 Persistenza Dati** — Le impostazioni, le battute e gli accenti vengono salvati automaticamente nel `localStorage` del browser.
+- **💾 Persistenza Dati** — Le impostazioni (incluso BPM e volume del click), le battute e gli accenti vengono salvati automaticamente nel `localStorage` del browser.
 - **⌨️ Scorciatoie da Tastiera** — Controlla il metronomo senza usare il mouse.
 - **📱 Responsive Design** — Interfaccia ottimizzata per desktop, tablet e smartphone.
+- **🔒 Schermo Sempre Attivo** — Durante la riproduzione lo schermo non si spegne automaticamente (Wake Lock API).
+- **📲 Installabile come App (PWA)** — Funziona offline e può essere aggiunta alla home screen di smartphone e desktop.
+- **📁 Libreria Preset** — Salva sequenze intere con un nome (es. "Studio Bach BWV 1") e richiamale in un click.
+- **📤 Export / Import / Condivisione** — Esporta la sequenza corrente come file JSON, importane una, o genera un link condivisibile da mandare a uno studente.
+- **🥁 Countdown con Suono Dedicato** — I 4 battiti di preparazione usano un timbro diverso dal click principale, per non confondere "sto contando" con "è partito".
+- **🎷 Swing / Shuffle** — Percentuale di swing regolabile (0–75%) per suonare terzine "swingate" tipiche di jazz e blues.
+- **🎹 MIDI Clock Output** — Invia il clock MIDI (24 PPQN) a DAW, drum machine o pedaliere esterne via Web MIDI API.
+- **🥋 Silenzio a Intervalli (Bruce Lee Mode)** — Il click sparisce per N battute e riappare dopo M, per allenare il time-feel interno.
+- **📊 Statistiche di Pratica** — Minuti totali, numero di sessioni, BPM massimo raggiunto e data dell'ultima sessione, salvati in locale.
+- **🌗 Tema Chiaro / Scuro** — Passa dal tema scuro predefinito a un tema chiaro leggibile anche alla luce diretta.
 
 ---
 
@@ -93,7 +103,8 @@ Un metronomo poliritmico professionale e completamente web-based, progettato per
 - **CSS3** — Design moderno con variabili CSS, backdrop-filter, animazioni fluide
 - **Vanilla JavaScript** — Nessuna dipendenza esterna; Web Audio API per la generazione audio
 - **Web Audio API** — Sintesi audio in tempo reale (oscillatori, noise buffer, gain nodes)
-- **LocalStorage API** — Persistenza delle preferenze utente
+- **Web MIDI API** — Invio del clock MIDI a dispositivi esterni (supportata su Chrome/Edge desktop e Android; non disponibile su Safari/Firefox)
+- **LocalStorage API** — Persistenza delle preferenze utente, preset e statistiche
 
 ---
 
@@ -101,11 +112,18 @@ Un metronomo poliritmico professionale e completamente web-based, progettato per
 
 ```
 .
-├── Metronomo_Poliritmico.html   # Applicazione completa (single-file)
-└── README.md                    # Documentazione
+├── index.html            # Struttura dell'applicazione
+├── style.css             # Stili
+├── script.js             # Logica dell'app (Web Audio API, scheduler, UI)
+├── manifest.json          # Manifest PWA (installazione come app)
+├── sw.js                  # Service Worker (funzionamento offline)
+├── icon-192.png            # Icona app 192×192
+├── icon-512.png            # Icona app 512×512
+├── apple-touch-icon.png    # Icona per dispositivi iOS
+└── README.md              # Documentazione
 ```
 
-> L'intera applicazione è contenuta in un unico file HTML per massima portabilità: basta aprirlo in un browser.
+> Per il funzionamento offline e l'installazione come app (PWA), i file vanno serviti da un server web (anche locale, es. `npx serve` o `python -m http.server`) — non funziona aprendo `index.html` direttamente da file system, poiché i Service Worker richiedono un'origine `http(s)://` o `localhost`.
 
 ---
 
